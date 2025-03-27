@@ -6,7 +6,7 @@ import {
   FilePlus, 
   FolderPlus, 
   ChevronLeft,
-  File
+  File, Code
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -17,7 +17,16 @@ import {
 } from '@/components/ui/tooltip';
 import { useProjectContext } from '@/contexts/ProjectContext';
 import { useEditorContext } from '@/contexts/EditorContext';
-import { SiJavascript, SiHtml5, SiCss3, SiTypescript, SiPython, SiJava, SiPhp, SiMarkdown, SiJson } from 'react-icons/si';
+import { 
+  SiJavascript, 
+  SiHtml5, 
+  SiCss3, 
+  SiTypescript, 
+  SiPython, 
+  SiPhp, 
+  SiMarkdown, 
+  SiJson 
+} from 'react-icons/si';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -31,7 +40,7 @@ const getLanguageIcon = (extension: string) => {
     case 'html': return <SiHtml5 className="text-orange-500" />;
     case 'css': return <SiCss3 className="text-blue-400" />;
     case 'py': return <SiPython className="text-blue-500" />;
-    case 'java': return <SiJava className="text-orange-600" />;
+    case 'java': return <Code className="text-orange-600" />;
     case 'php': return <SiPhp className="text-indigo-400" />;
     case 'md': return <SiMarkdown className="text-gray-400" />;
     case 'json': return <SiJson className="text-yellow-200" />;
@@ -171,7 +180,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
               {expandedFolders['src'] && (
                 <div className="ml-4">
                   {projectFiles
-                    .filter(file => file.path.startsWith('/src'))
+                    .filter(file => file.path && file.path.startsWith('/src'))
                     .map((file) => (
                       <div 
                         key={file.id}

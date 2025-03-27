@@ -7,7 +7,8 @@ import {
   MessageSquareQuote, 
   Search, 
   Play, 
-  Save 
+  Save,
+  Code
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useEditorContext } from '@/contexts/EditorContext';
@@ -20,18 +21,8 @@ import {
   SiPython, 
   SiPhp, 
   SiMarkdown, 
-  SiJson, 
-  SiC, 
-  SiCplusplus, 
-  SiGo,
-  SiRust,
-  SiRuby
+  SiJson
 } from 'react-icons/si';
-import { 
-  DiJava, 
-  DiCssdeck
-} from 'react-icons/di';
-import { CgSmartHomeRefrigerator } from 'react-icons/cg';
 import { supportedLanguages } from '@shared/schema';
 import { getLanguageDisplayName } from '@/utils/languageUtils';
 
@@ -67,17 +58,17 @@ const getLanguageIcon = (language: string) => {
     case 'html': return <SiHtml5 className="text-orange-500" />;
     case 'css': return <SiCss3 className="text-blue-400" />;
     case 'python': return <SiPython className="text-blue-500" />;
-    case 'java': return <DiJava className="text-orange-600" />;
+    case 'java': return <Code className="text-orange-600" />;
     case 'php': return <SiPhp className="text-indigo-400" />;
     case 'markdown': return <SiMarkdown className="text-gray-400" />;
     case 'json': return <SiJson className="text-yellow-200" />;
-    case 'c': return <SiC className="text-blue-300" />;
-    case 'cpp': return <SiCplusplus className="text-blue-600" />;
-    case 'csharp': return <DiCssdeck className="text-purple-500" />;
-    case 'go': return <SiGo className="text-cyan-500" />;
-    case 'rust': return <SiRust className="text-orange-700" />;
-    case 'ruby': return <SiRuby className="text-red-600" />;
-    default: return <div className="w-4 h-4 rounded-full bg-gray-500" />;
+    case 'c': return <Code className="text-blue-300" />;
+    case 'cpp': return <Code className="text-blue-600" />;
+    case 'csharp': return <Code className="text-purple-500" />;
+    case 'go': return <Code className="text-cyan-500" />;
+    case 'rust': return <Code className="text-orange-700" />;
+    case 'ruby': return <Code className="text-red-600" />;
+    default: return <Code className="text-gray-500" />;
   }
 };
 

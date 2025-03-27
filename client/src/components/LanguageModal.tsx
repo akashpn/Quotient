@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, Code } from 'lucide-react';
 import { 
   Dialog,
   DialogContent,
@@ -10,8 +10,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { supportedLanguages } from '@shared/schema';
 import { useEditorContext } from '@/contexts/EditorContext';
-import { SiJavascript, SiTypescript, SiPython, SiJava, SiCsharp, SiCplusplus, SiC, 
-         SiGo, SiRust, SiRuby, SiPhp, SiHtml5, SiCss3, SiJson, SiMarkdown } from 'react-icons/si';
+import { 
+  SiJavascript, 
+  SiTypescript, 
+  SiPython, 
+  SiPhp, 
+  SiHtml5, 
+  SiCss3, 
+  SiJson, 
+  SiMarkdown 
+} from 'react-icons/si';
 
 interface LanguageModalProps {
   open: boolean;
@@ -28,19 +36,19 @@ const LanguageModal: React.FC<LanguageModalProps> = ({ open, onOpenChange }) => 
       case 'javascript': return <SiJavascript className="text-yellow-400 w-5 h-5" />;
       case 'typescript': return <SiTypescript className="text-blue-500 w-5 h-5" />;
       case 'python': return <SiPython className="text-blue-400 w-5 h-5" />;
-      case 'java': return <SiJava className="text-orange-500 w-5 h-5" />;
-      case 'c': return <SiC className="text-blue-500 w-5 h-5" />;
-      case 'cpp': return <SiCplusplus className="text-blue-700 w-5 h-5" />;
-      case 'csharp': return <SiCsharp className="text-green-600 w-5 h-5" />;
-      case 'go': return <SiGo className="text-blue-400 w-5 h-5" />;
-      case 'rust': return <SiRust className="text-orange-600 w-5 h-5" />;
-      case 'ruby': return <SiRuby className="text-red-600 w-5 h-5" />;
+      case 'java': return <Code className="text-orange-500 w-5 h-5" />;
+      case 'c': return <Code className="text-blue-500 w-5 h-5" />;
+      case 'cpp': return <Code className="text-blue-700 w-5 h-5" />;
+      case 'csharp': return <Code className="text-green-600 w-5 h-5" />;
+      case 'go': return <Code className="text-blue-400 w-5 h-5" />;
+      case 'rust': return <Code className="text-orange-600 w-5 h-5" />;
+      case 'ruby': return <Code className="text-red-600 w-5 h-5" />;
       case 'php': return <SiPhp className="text-indigo-400 w-5 h-5" />;
       case 'html': return <SiHtml5 className="text-orange-600 w-5 h-5" />;
       case 'css': return <SiCss3 className="text-blue-500 w-5 h-5" />;
       case 'json': return <SiJson className="text-yellow-200 w-5 h-5" />;
       case 'markdown': return <SiMarkdown className="text-gray-400 w-5 h-5" />;
-      default: return null;
+      default: return <Code className="text-gray-400 w-5 h-5" />;
     }
   };
   

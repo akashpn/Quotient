@@ -1,8 +1,8 @@
 import React from 'react';
-import { X, Columns, MoreVertical } from 'lucide-react';
+import { X, Columns, MoreVertical, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useEditorContext } from '@/contexts/EditorContext';
-import { SiJavascript, SiHtml5, SiCss3, SiTypescript, SiPython, SiJava, SiPhp, SiMarkdown, SiJson } from 'react-icons/si';
+import { SiJavascript, SiHtml5, SiCss3, SiTypescript, SiPython, SiPhp, SiMarkdown, SiJson } from 'react-icons/si';
 
 const getLanguageIcon = (language: string) => {
   switch (language.toLowerCase()) {
@@ -11,7 +11,7 @@ const getLanguageIcon = (language: string) => {
     case 'html': return <SiHtml5 className="text-orange-500" />;
     case 'css': return <SiCss3 className="text-blue-400" />;
     case 'python': return <SiPython className="text-blue-500" />;
-    case 'java': return <SiJava className="text-orange-600" />;
+    case 'java': return <Code className="text-orange-600" />;
     case 'php': return <SiPhp className="text-indigo-400" />;
     case 'markdown': return <SiMarkdown className="text-gray-400" />;
     case 'json': return <SiJson className="text-yellow-200" />;
