@@ -149,12 +149,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { userId, username } = userInfo;
         
         // Remove user from all file connections
-        for (const [fileId, clients] of fileConnections.entries()) {
+        Array.from(fileConnections.entries()).forEach(([fileId, clients]) => {
           if (clients.has(userId)) {
             clients.delete(userId);
             
             // Notify other clients about the disconnection
-            clients.forEach((client) => {
+            clients.forEach((client: WebSocket) => {
               if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({
                   type: 'leave',
@@ -171,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               fileConnections.delete(fileId);
             }
           }
-        }
+        });
         
         activeUsers.delete(ws);
         log(`User ${username} (${userId}) disconnected`, 'ws');

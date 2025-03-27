@@ -12,8 +12,28 @@ import {
 import { Button } from '@/components/ui/button';
 import { useEditorContext } from '@/contexts/EditorContext';
 import { useCollaborationContext } from '@/contexts/CollaborationContext';
-import { SiJavascript, SiHtml5, SiCss3, SiTypescript, SiPython, SiJava, SiPhp, SiMarkdown, SiJson } from 'react-icons/si';
+import { 
+  SiJavascript, 
+  SiHtml5, 
+  SiCss3, 
+  SiTypescript, 
+  SiPython, 
+  SiPhp, 
+  SiMarkdown, 
+  SiJson, 
+  SiC, 
+  SiCplusplus, 
+  SiGo,
+  SiRust,
+  SiRuby
+} from 'react-icons/si';
+import { 
+  DiJava, 
+  DiCssdeck
+} from 'react-icons/di';
+import { CgSmartHomeRefrigerator } from 'react-icons/cg';
 import { supportedLanguages } from '@shared/schema';
+import { getLanguageDisplayName } from '@/utils/languageUtils';
 
 // Load Monaco editor globally
 if (typeof window !== 'undefined') {
@@ -47,11 +67,17 @@ const getLanguageIcon = (language: string) => {
     case 'html': return <SiHtml5 className="text-orange-500" />;
     case 'css': return <SiCss3 className="text-blue-400" />;
     case 'python': return <SiPython className="text-blue-500" />;
-    case 'java': return <SiJava className="text-orange-600" />;
+    case 'java': return <DiJava className="text-orange-600" />;
     case 'php': return <SiPhp className="text-indigo-400" />;
     case 'markdown': return <SiMarkdown className="text-gray-400" />;
     case 'json': return <SiJson className="text-yellow-200" />;
-    default: return null;
+    case 'c': return <SiC className="text-blue-300" />;
+    case 'cpp': return <SiCplusplus className="text-blue-600" />;
+    case 'csharp': return <DiCssdeck className="text-purple-500" />;
+    case 'go': return <SiGo className="text-cyan-500" />;
+    case 'rust': return <SiRust className="text-orange-700" />;
+    case 'ruby': return <SiRuby className="text-red-600" />;
+    default: return <div className="w-4 h-4 rounded-full bg-gray-500" />;
   }
 };
 
@@ -72,7 +98,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ onRunCode }) => {
     }
 
     const editor = monaco.editor.create(editorRef.current, {
-      value: activeFile.content,
+      value: activeFile.content || "",
       language: activeFile.language,
       theme: 'quotientDark',
       automaticLayout: true,
@@ -138,9 +164,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ onRunCode }) => {
     
     // Only update if content actually differs to avoid cursor jumps
     const currentContent = editorInstance.getValue();
-    if (currentContent !== activeFile.content) {
+    const fileContent = activeFile.content || "";
+    if (currentContent !== fileContent) {
       const position = editorInstance.getPosition();
-      editorInstance.setValue(activeFile.content);
+      editorInstance.setValue(fileContent);
       if (position) {
         editorInstance.setPosition(position);
       }
@@ -254,7 +281,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ onRunCode }) => {
   const handleSaveFile = () => {
     if (activeFile) {
       // Send save message to backend
-      sendEdit(activeFile.id, activeFile.content, true);
+      const content = activeFile.content || "";
+      sendEdit(activeFile.id, content, true);
     }
   };
   
@@ -298,7 +326,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ onRunCode }) => {
               onClick={() => setShowLanguageSelector(!showLanguageSelector)}
             >
               <span className="mr-2">{getLanguageIcon(activeFile.language)}</span>
-              <span className="capitalize">{activeFile.language}</span>
+              <span>{getLanguageDisplayName(activeFile.language as any)}</span>
               <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
             
@@ -313,7 +341,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ onRunCode }) => {
                       onClick={() => handleLanguageChange(lang)}
                     >
                       <span className="mr-2">{getLanguageIcon(lang)}</span>
-                      <span className="capitalize">{lang}</span>
+                      <span>{getLanguageDisplayName(lang)}</span>
                     </Button>
                   ))}
                 </div>
