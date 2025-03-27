@@ -59,101 +59,116 @@ export const CollaborationProvider: React.FC<{ children: React.ReactNode }> = ({
   // Setup WebSocket connection
   useEffect(() => {
     const connectWebSocket = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      const ws = new WebSocket(wsUrl);
-      
-      ws.onopen = () => {
-        setIsConnected(true);
-        console.log('WebSocket connected');
+      try {
+        console.log('Attempting to connect to WebSocket...');
+        // Use the full URL with explicit port
+        const host = window.location.hostname;
+        const port = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${host}:${port}/ws`;
+        console.log('WebSocket URL:', wsUrl);
         
-        // Join current file if one is active
-        if (activeFile) {
-          ws.send(JSON.stringify({
-            type: 'join',
-            userId: currentUser.id,
-            username: currentUser.username,
-            fileId: activeFile.id,
-            data: {},
-            timestamp: Date.now()
-          }));
-        }
-      };
-      
-      ws.onclose = () => {
-        setIsConnected(false);
-        console.log('WebSocket disconnected, retrying in 3 seconds...');
+        const newSocket = new WebSocket(wsUrl);
         
+        newSocket.onopen = () => {
+          setIsConnected(true);
+          console.log('WebSocket connected successfully');
+          
+          // Join current file if one is active
+          if (activeFile) {
+            newSocket.send(JSON.stringify({
+              type: 'join',
+              userId: currentUser.id,
+              username: currentUser.username,
+              fileId: activeFile.id,
+              data: {},
+              timestamp: Date.now()
+            }));
+          }
+        };
+        
+        newSocket.onclose = () => {
+          setIsConnected(false);
+          console.log('WebSocket disconnected, retrying in 3 seconds...');
+          
+          // Attempt to reconnect after a delay
+          if (reconnectTimeoutRef.current) {
+            window.clearTimeout(reconnectTimeoutRef.current);
+          }
+          
+          reconnectTimeoutRef.current = window.setTimeout(() => {
+            connectWebSocket();
+          }, 3000);
+        };
+        
+        newSocket.onerror = (error) => {
+          console.error('WebSocket error:', error);
+        };
+        
+        newSocket.onmessage = (event: MessageEvent) => {
+          try {
+            const message = JSON.parse(event.data as string) as Message;
+            
+            // Handle different message types
+            switch (message.type) {
+              case 'cursor':
+                updateCollaboratorCursor(message);
+                break;
+              case 'selection':
+                updateCollaboratorSelection(message);
+                break;
+              case 'edit':
+                addCollaborationEvent(message.userId, message.username, 'is editing', `Changed content in ${activeFile?.name || 'current file'}`);
+                break;
+              case 'join':
+                addCollaborationEvent(message.userId, message.username, 'joined', `Now editing ${activeFile?.name || 'current file'}`);
+                break;
+              case 'leave':
+                removeCollaborator(message.userId);
+                addCollaborationEvent(message.userId, message.username, 'left', `Stopped editing ${activeFile?.name || 'current file'}`);
+                break;
+              case 'users_list':
+                // Update list of active users in this file
+                const usersList = message.data as { userId: number, username: string }[];
+                const newCollaborators = usersList
+                  .filter(user => user.userId !== currentUser.id) // Filter out current user
+                  .map(user => ({
+                    userId: user.userId,
+                    username: user.username,
+                    fileId: activeFile?.id || 0,
+                    lastActivity: Date.now()
+                  }));
+                
+                setCollaborators(prev => [
+                  ...prev.filter(c => !newCollaborators.some(nc => nc.userId === c.userId)),
+                  ...newCollaborators
+                ]);
+                break;
+              case 'saved':
+                addCollaborationEvent(message.userId, message.username, 'saved', `Saved ${activeFile?.name || 'current file'}`);
+                break;
+            }
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+          }
+        };
+        
+        setSocket(newSocket);
+        
+        return () => {
+          newSocket.close();
+          if (reconnectTimeoutRef.current) {
+            window.clearTimeout(reconnectTimeoutRef.current);
+          }
+        };
+      } catch (error) {
+        console.error('Failed to establish WebSocket connection:', error);
         // Attempt to reconnect after a delay
-        if (reconnectTimeoutRef.current) {
-          window.clearTimeout(reconnectTimeoutRef.current);
-        }
-        
         reconnectTimeoutRef.current = window.setTimeout(() => {
           connectWebSocket();
         }, 3000);
-      };
-      
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
-      
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data) as Message;
-          
-          // Handle different message types
-          switch (message.type) {
-            case 'cursor':
-              updateCollaboratorCursor(message);
-              break;
-            case 'selection':
-              updateCollaboratorSelection(message);
-              break;
-            case 'edit':
-              addCollaborationEvent(message.userId, message.username, 'is editing', `Changed content in ${activeFile?.name || 'current file'}`);
-              break;
-            case 'join':
-              addCollaborationEvent(message.userId, message.username, 'joined', `Now editing ${activeFile?.name || 'current file'}`);
-              break;
-            case 'leave':
-              removeCollaborator(message.userId);
-              addCollaborationEvent(message.userId, message.username, 'left', `Stopped editing ${activeFile?.name || 'current file'}`);
-              break;
-            case 'users_list':
-              // Update list of active users in this file
-              const usersList = message.data as { userId: number, username: string }[];
-              const newCollaborators = usersList
-                .filter(user => user.userId !== currentUser.id) // Filter out current user
-                .map(user => ({
-                  userId: user.userId,
-                  username: user.username,
-                  fileId: activeFile?.id || 0,
-                  lastActivity: Date.now()
-                }));
-              
-              setCollaborators(prev => [
-                ...prev.filter(c => !newCollaborators.some(nc => nc.userId === c.userId)),
-                ...newCollaborators
-              ]);
-              break;
-            case 'saved':
-              addCollaborationEvent(message.userId, message.username, 'saved', `Saved ${activeFile?.name || 'current file'}`);
-              break;
-          }
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-      
-      setSocket(ws);
-      
-      return () => {
-        ws.close();
-        if (reconnectTimeoutRef.current) {
-          window.clearTimeout(reconnectTimeoutRef.current);
-        }
-      };
+        return () => {};
+      }
     };
     
     connectWebSocket();

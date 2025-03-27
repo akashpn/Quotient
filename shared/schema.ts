@@ -79,6 +79,8 @@ export const messageSchema = z.object({
     'sync',
     'file_change',
     'save',
+    'saved',
+    'users_list',
     'create_file',
     'create_folder',
     'delete_file',

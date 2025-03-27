@@ -11,7 +11,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
   // WebSocket server for collaborative editing
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws',
+    // Allow connection from any origin
+    verifyClient: () => true 
+  });
   
   // Map to store all active connections by file ID
   const fileConnections = new Map<number, Map<number, WebSocket>>();
