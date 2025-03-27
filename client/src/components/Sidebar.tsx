@@ -211,7 +211,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
               {expandedFolders['tests'] && (
                 <div className="ml-4">
                   {projectFiles
-                    .filter(file => file.path.startsWith('/tests'))
+                    .filter(file => file.path && file.path.startsWith('/tests'))
                     .map((file) => (
                       <div 
                         key={file.id}
@@ -242,7 +242,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
               {expandedFolders['assets'] && (
                 <div className="ml-4">
                   {projectFiles
-                    .filter(file => file.path.startsWith('/assets'))
+                    .filter(file => file.path && file.path.startsWith('/assets'))
                     .map((file) => (
                       <div 
                         key={file.id}
@@ -258,7 +258,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
             </div>
             
             {projectFiles
-              .filter(file => file.path === '/')
+              .filter(file => file.path && file.path === '/')
               .map((file) => (
                 <div 
                   key={file.id}

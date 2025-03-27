@@ -15,8 +15,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({ onOpenShareDialog }) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           {/* Logo */}
-          <div className="text-accent text-2xl font-bold mr-4">
-            <span>Q</span><span className="text-white">uotient</span>
+          <div className="text-2xl font-bold mr-4">
+            <span className="text-indigo-500">Q</span><span className="text-foreground">uotient</span>
           </div>
           
           {/* Main Navigation */}
