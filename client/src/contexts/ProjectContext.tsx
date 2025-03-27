@@ -37,6 +37,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     isLoading: loadingFiles
   } = useQuery<File[]>({
     queryKey: ['/api/projects', activeProject?.id, 'files'],
+    queryFn: async () => {
+      if (!activeProject?.id) return [];
+      const response = await fetch(`/api/projects/${activeProject.id}/files`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch project files');
+      }
+      return response.json();
+    },
     enabled: !!activeProject?.id,
   });
   

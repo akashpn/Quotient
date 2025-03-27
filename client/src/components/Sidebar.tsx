@@ -58,6 +58,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     'src': true,
+    'root': true,
+    'tests': false,
+    'assets': false,
   });
 
   const toggleFolder = (folderPath: string) => {
@@ -71,14 +74,40 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     openFile(fileId);
   };
 
+  const getLanguageFromExtension = (filename: string): string => {
+    const ext = getExtension(filename);
+    switch (ext) {
+      case 'js': return 'javascript';
+      case 'ts': return 'typescript';
+      case 'py': return 'python';
+      case 'java': return 'java';
+      case 'c': return 'c';
+      case 'cpp': return 'cpp';
+      case 'cs': return 'csharp';
+      case 'go': return 'go';
+      case 'rs': return 'rust';
+      case 'rb': return 'ruby';
+      case 'php': return 'php';
+      case 'html': return 'html';
+      case 'css': return 'css';
+      case 'json': return 'json';
+      case 'md': return 'markdown';
+      default: return 'text';
+    }
+  };
+
   const handleNewFile = () => {
     const filename = prompt("Enter file name:");
     if (filename && activeProject) {
+      console.log("Creating new file:", filename);
+      const language = getLanguageFromExtension(filename);
+      console.log("Detected language:", language);
+      
       createFile({
         name: filename,
         path: '/',
         content: '',
-        language: getExtension(filename) === 'js' ? 'javascript' : 'text',
+        language,
         projectId: activeProject.id
       });
     }
@@ -257,18 +286,37 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
               )}
             </div>
             
-            {projectFiles
-              .filter(file => file.path && file.path === '/')
-              .map((file) => (
-                <div 
-                  key={file.id}
-                  className="flex items-center py-1 px-2 text-muted-foreground hover:text-foreground hover:bg-accent/10 rounded-md cursor-pointer transition-colors"
-                  onClick={() => handleFileClick(file.id)}
-                >
-                  <span className="mr-2">{getLanguageIcon(getExtension(file.name))}</span>
-                  <span className="text-sm">{file.name}</span>
+            <div className="mb-2">
+              <div 
+                className="flex items-center py-1 px-2 text-muted-foreground hover:text-foreground cursor-pointer"
+                onClick={() => toggleFolder('root')}
+              >
+                {expandedFolders['root'] ? (
+                  <ChevronDown className="h-4 w-4 mr-1" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 mr-1" />
+                )}
+                <Folder className="h-4 w-4 mr-2 text-amber-400" />
+                <span className="text-sm">root</span>
+              </div>
+              
+              {expandedFolders['root'] !== false && (
+                <div className="ml-4">
+                  {projectFiles
+                    .filter(file => !file.path || file.path === '/' || file.path === '')
+                    .map((file) => (
+                      <div 
+                        key={file.id}
+                        className="flex items-center py-1 px-2 text-muted-foreground hover:text-foreground hover:bg-accent/10 rounded-md cursor-pointer transition-colors"
+                        onClick={() => handleFileClick(file.id)}
+                      >
+                        <span className="mr-2">{getLanguageIcon(getExtension(file.name))}</span>
+                        <span className="text-sm">{file.name}</span>
+                      </div>
+                    ))}
                 </div>
-              ))}
+              )}
+            </div>
           </>
         )}
       </div>
