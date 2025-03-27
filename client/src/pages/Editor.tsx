@@ -10,6 +10,7 @@ import LanguageModal from '@/components/LanguageModal';
 import { useEditorContext } from '@/contexts/EditorContext';
 import { useCollaborationContext } from '@/contexts/CollaborationContext';
 import { canExecuteLanguage } from '@/utils/languageUtils';
+import { useCodeExecution } from '@/hooks/useCodeExecution';
 
 const Editor: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -17,6 +18,7 @@ const Editor: React.FC = () => {
   const [languageModalOpen, setLanguageModalOpen] = useState(false);
   const { activeFile } = useEditorContext();
   const { collaborators } = useCollaborationContext();
+  const { executeCode, isExecuting, lastResult } = useCodeExecution();
   
   const [outputContent, setOutputContent] = useState({
     result: '',
@@ -33,7 +35,24 @@ const Editor: React.FC = () => {
     setOutputVisible(!outputVisible);
   };
   
-  const handleRunCode = () => {
+  // Update output content when execution results change
+  React.useEffect(() => {
+    if (lastResult) {
+      setOutputContent({
+        result: lastResult.result || '',
+        executionTime: lastResult.executionTime,
+        logs: lastResult.logs || [],
+        errors: lastResult.error ? [lastResult.error] : []
+      });
+      
+      // Show output panel if it's not already visible
+      if (!outputVisible) {
+        setOutputVisible(true);
+      }
+    }
+  }, [lastResult]);
+  
+  const handleRunCode = async () => {
     if (!activeFile) return;
     
     // Clear previous output
@@ -55,50 +74,8 @@ const Editor: React.FC = () => {
       return;
     }
     
-    const startTime = performance.now();
-    
-    // Capture console.log output
-    const originalConsoleLog = console.log;
-    const logs: string[] = [];
-    console.log = (...args) => {
-      logs.push(args.map(arg => String(arg)).join(' '));
-      originalConsoleLog(...args);
-    };
-    
-    try {
-      // Very simple execution for demo purposes
-      // In a real app, this would use a sandboxed environment or server-side execution
-      if (activeFile.language === 'javascript' || activeFile.language === 'typescript') {
-        // eslint-disable-next-line no-new-func
-        const result = new Function(activeFile.content)();
-        const executionTime = Math.round(performance.now() - startTime);
-        
-        setOutputContent({
-          result: result !== undefined ? String(result) : 'Code executed successfully.',
-          executionTime,
-          logs,
-          errors: []
-        });
-      } else {
-        setOutputContent({
-          result: 'Server-side execution not implemented in this demo.',
-          executionTime: 0,
-          logs,
-          errors: []
-        });
-      }
-    } catch (error) {
-      const executionTime = Math.round(performance.now() - startTime);
-      setOutputContent({
-        result: 'Execution failed.',
-        executionTime,
-        logs,
-        errors: [(error as Error).toString()]
-      });
-    } finally {
-      // Restore console.log
-      console.log = originalConsoleLog;
-    }
+    // Execute code on the server
+    await executeCode(activeFile.content || '', activeFile.language as any);
   };
   
   const clearOutput = () => {
@@ -149,7 +126,7 @@ const Editor: React.FC = () => {
       />
       
       {/* Add Monaco editor styles for collaborative cursors and selections */}
-      <style jsx global>{`
+      <style>{`
         .user-cursor {
           position: absolute;
           width: 2px;

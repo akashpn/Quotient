@@ -59,7 +59,8 @@ export function getTemplateForLanguage(language: SupportedLanguage): string {
 
 // Helper to decide if a language supports execution
 export function canExecuteLanguage(language: SupportedLanguage): boolean {
-  return ['javascript', 'typescript', 'python', 'html', 'css', 'json', 'markdown'].includes(language);
+  // Only include languages we can execute on the server
+  return ['javascript', 'typescript', 'python'].includes(language);
 }
 
 // Get sample code for basic execution in different languages

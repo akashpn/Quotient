@@ -6,6 +6,7 @@ import { messageSchema, supportedLanguages, type Message } from '@shared/schema'
 import { log } from './vite';
 import { ZodError } from 'zod';
 import { fromZodError } from 'zod-validation-error';
+import { executeJavaScript, executeTypeScript, executePython } from './execution';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -281,6 +282,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.json({ id: user.id, username: user.username });
+  });
+  
+  // Code execution API
+  app.post('/api/execute', async (req, res) => {
+    try {
+      const { code, language } = req.body;
+      
+      if (!code || !language) {
+        return res.status(400).json({ 
+          error: "Missing required parameters (code, language)" 
+        });
+      }
+      
+      const startTime = Date.now();
+      let result;
+      let error = null;
+      
+      try {
+        // Execute code based on language
+        switch (language) {
+          case 'javascript':
+            // Execute JavaScript with Node.js
+            result = await executeJavaScript(code);
+            break;
+          case 'python':
+            // Execute Python
+            result = await executePython(code);
+            break;
+          case 'typescript':
+            // Execute TypeScript
+            result = await executeTypeScript(code);
+            break;
+          default:
+            return res.status(400).json({ 
+              error: `Language '${language}' is not supported for execution` 
+            });
+        }
+      } catch (err) {
+        error = (err as Error).message;
+      }
+      
+      const endTime = Date.now();
+      const executionTime = endTime - startTime;
+      
+      res.json({
+        result: result || "",
+        error,
+        executionTime
+      });
+    } catch (error) {
+      console.error("Execution error:", error);
+      res.status(500).json({ 
+        error: "Failed to execute code", 
+        details: (error as Error).message 
+      });
+    }
   });
   
   return httpServer;
