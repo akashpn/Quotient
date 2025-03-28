@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useEditorContext } from './EditorContext';
+import { useAuth } from './AuthContext';
 import { type Message } from '@shared/schema';
 
 interface CursorPosition {
@@ -42,22 +43,28 @@ interface CollaborationContextProps {
 
 const CollaborationContext = createContext<CollaborationContextProps | undefined>(undefined);
 
-// Mocked user information - in a real app, this would come from authentication
-const currentUser = {
-  id: 1,
-  username: 'CurrentUser'
-};
-
 export const CollaborationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { activeFile } = useEditorContext();
+  const { user } = useAuth();
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [collaborationEvents, setCollaborationEvents] = useState<CollaborationEvent[]>([]);
   const reconnectTimeoutRef = useRef<number | null>(null);
   
+  // Get current user ID and username from auth context
+  const currentUser = {
+    id: user?.id || 0,
+    username: user?.username || 'Guest'
+  };
+  
   // Setup WebSocket connection
   useEffect(() => {
+    // Only attempt to connect if user is authenticated
+    if (!user || !user.id) {
+      return;
+    }
+    
     const connectWebSocket = () => {
       try {
         console.log('Attempting to connect to WebSocket...');
@@ -181,11 +188,11 @@ export const CollaborationProvider: React.FC<{ children: React.ReactNode }> = ({
         window.clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, []);
+  }, [user]);
   
   // Join/leave files when the active file changes
   useEffect(() => {
-    if (!socket || socket.readyState !== WebSocket.OPEN || !activeFile) return;
+    if (!socket || socket.readyState !== WebSocket.OPEN || !activeFile || !user) return;
     
     // Send leave message for any previous file
     const previousFileIds = Array.from(new Set(
@@ -217,7 +224,7 @@ export const CollaborationProvider: React.FC<{ children: React.ReactNode }> = ({
       data: {},
       timestamp: Date.now()
     }));
-  }, [activeFile?.id, socket]);
+  }, [activeFile?.id, socket, user, currentUser.id, currentUser.username]);
   
   // Helper functions to update collaborator state
   const updateCollaboratorCursor = (message: Message) => {
