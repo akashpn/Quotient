@@ -81,7 +81,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             fileConnections.get(fileId)?.set(userId, ws);
             
-            // Send list of active users in this file to the new user
+            // Send list of active users in this file to all users in the file
             const activeFileUsers = Array.from(fileConnections.get(fileId)?.entries() || [])
               .map(([uid, _]) => {
                 const user = Array.from(activeUsers.entries())
@@ -90,10 +90,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
               })
               .filter(Boolean);
             
+            // Send to the new user
             ws.send(JSON.stringify({
               type: 'users_list',
-              data: activeFileUsers
+              data: activeFileUsers,
+              userId: userId,
+              username: username,
+              fileId: fileId,
+              timestamp: Date.now()
             }));
+            
+            // Also send updated list to all connected clients for this file
+            fileConnections.get(fileId)?.forEach((client, cuid) => {
+              if (client.readyState === WebSocket.OPEN && cuid !== userId) {
+                client.send(JSON.stringify({
+                  type: 'users_list',
+                  data: activeFileUsers,
+                  userId: 0, // system message
+                  username: 'system',
+                  fileId: fileId,
+                  timestamp: Date.now()
+                }));
+              }
+            });
             
             // Get file content and send it to the user
             if (fileId) {
@@ -190,10 +209,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Notify other clients about the disconnection
             clients.forEach((client: WebSocket) => {
               if (client.readyState === WebSocket.OPEN) {
+                // Send leave notification
                 client.send(JSON.stringify({
                   type: 'leave',
                   userId,
                   username,
+                  fileId,
+                  timestamp: Date.now()
+                }));
+                
+                // Also send updated users list
+                const updatedUsers = Array.from(clients.entries())
+                  .map(([uid, _]) => {
+                    const userInfo = Array.from(activeUsers.entries())
+                      .find(([_, info]) => info.userId === uid);
+                    return userInfo ? userInfo[1] : null;
+                  })
+                  .filter(Boolean);
+                  
+                client.send(JSON.stringify({
+                  type: 'users_list',
+                  data: updatedUsers,
+                  userId: 0, // system message
+                  username: 'system',
                   fileId,
                   timestamp: Date.now()
                 }));
