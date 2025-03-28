@@ -1,10 +1,12 @@
 import { 
-  users, projects, files, 
+  users, projects, files, collaborators,
   type User, type InsertUser, 
   type Project, type InsertProject, 
   type File, type InsertFile,
+  type Collaborator, type InsertCollaborator,
   type SupportedLanguage
 } from "@shared/schema";
+import { v4 as uuidv4 } from 'uuid';
 
 // IStorage interface with CRUD methods
 export interface IStorage {
@@ -27,23 +29,35 @@ export interface IStorage {
   updateFile(id: number, file: Partial<File>): Promise<File>;
   updateFileContent(id: number, content: string): Promise<File>;
   deleteFile(id: number): Promise<void>;
+  
+  // Collaboration operations
+  getProjectCollaborators(projectId: number): Promise<User[]>;
+  addCollaborator(projectId: number, userId: number, role?: string): Promise<void>;
+  removeCollaborator(projectId: number, userId: number): Promise<void>;
+  createInvitation(projectId: number, email: string): Promise<string>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private projects: Map<number, Project>;
   private files: Map<number, File>;
+  private collaborators: Map<string, Collaborator>; // key is `${projectId}:${userId}`
+  private invitations: Map<string, { projectId: number, email: string, token: string }>;
   private userId: number;
   private projectId: number;
   private fileId: number;
+  private collaboratorId: number;
 
   constructor() {
     this.users = new Map();
     this.projects = new Map();
     this.files = new Map();
+    this.collaborators = new Map();
+    this.invitations = new Map();
     this.userId = 1;
     this.projectId = 1;
     this.fileId = 1;
+    this.collaboratorId = 1;
     
     // Create default demo data
     this.initializeDemoData();
@@ -201,6 +215,102 @@ export class MemStorage implements IStorage {
     }
     
     this.files.delete(id);
+  }
+  
+  // Collaboration methods
+  async getProjectCollaborators(projectId: number): Promise<User[]> {
+    // Check if project exists
+    if (!this.projects.has(projectId)) {
+      throw new Error(`Project with ID ${projectId} not found`);
+    }
+    
+    // Get all collaborator entries for this project
+    const projectCollaborators = Array.from(this.collaborators.values())
+      .filter(collab => collab.projectId === projectId);
+    
+    // Get the actual user objects
+    const collaboratorUsers: User[] = [];
+    for (const collab of projectCollaborators) {
+      const user = await this.getUser(collab.userId);
+      if (user) {
+        collaboratorUsers.push(user);
+      }
+    }
+    
+    // Also include the project owner
+    const project = await this.getProject(projectId);
+    if (project) {
+      const owner = await this.getUser(project.ownerId);
+      if (owner && !collaboratorUsers.some(u => u.id === owner.id)) {
+        collaboratorUsers.push(owner);
+      }
+    }
+    
+    return collaboratorUsers;
+  }
+  
+  async addCollaborator(projectId: number, userId: number, role: string = 'editor'): Promise<void> {
+    // Check if project exists
+    if (!this.projects.has(projectId)) {
+      throw new Error(`Project with ID ${projectId} not found`);
+    }
+    
+    // Check if user exists
+    if (!this.users.has(userId)) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+    
+    // Check if already a collaborator
+    const key = `${projectId}:${userId}`;
+    if (this.collaborators.has(key)) {
+      return; // Already a collaborator, no action needed
+    }
+    
+    // Add as collaborator
+    const id = this.collaboratorId++;
+    const collaborator: Collaborator = {
+      id,
+      userId,
+      projectId,
+      role
+    };
+    
+    this.collaborators.set(key, collaborator);
+  }
+  
+  async removeCollaborator(projectId: number, userId: number): Promise<void> {
+    // Check if project exists
+    if (!this.projects.has(projectId)) {
+      throw new Error(`Project with ID ${projectId} not found`);
+    }
+    
+    // Check if user exists
+    if (!this.users.has(userId)) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+    
+    // Remove collaborator
+    const key = `${projectId}:${userId}`;
+    this.collaborators.delete(key);
+  }
+  
+  async createInvitation(projectId: number, email: string): Promise<string> {
+    // Check if project exists
+    if (!this.projects.has(projectId)) {
+      throw new Error(`Project with ID ${projectId} not found`);
+    }
+    
+    // Generate a token
+    const token = uuidv4();
+    
+    // Store invitation
+    this.invitations.set(token, { 
+      projectId, 
+      email, 
+      token 
+    });
+    
+    return token;
   }
 }
 
