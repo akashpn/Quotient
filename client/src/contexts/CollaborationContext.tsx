@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useEditorContext } from './EditorContext';
-import { useAuth } from './AuthContext';
+import { useAuth } from '@/hooks/use-auth';
 import { type Message } from '@shared/schema';
 
 interface CursorPosition {
@@ -136,20 +136,26 @@ export const CollaborationProvider: React.FC<{ children: React.ReactNode }> = ({
                 break;
               case 'users_list':
                 // Update list of active users in this file
+                console.log('Received users_list message:', message);
                 const usersList = message.data as { userId: number, username: string }[];
-                const newCollaborators = usersList
-                  .filter(user => user.userId !== currentUser.id) // Filter out current user
-                  .map(user => ({
-                    userId: user.userId,
-                    username: user.username,
-                    fileId: activeFile?.id || 0,
-                    lastActivity: Date.now()
-                  }));
-                
-                setCollaborators(prev => [
-                  ...prev.filter(c => !newCollaborators.some(nc => nc.userId === c.userId)),
-                  ...newCollaborators
-                ]);
+                if (Array.isArray(usersList)) {
+                  const newCollaborators = usersList
+                    .filter(user => user.userId !== currentUser.id) // Filter out current user
+                    .map(user => ({
+                      userId: user.userId,
+                      username: user.username,
+                      fileId: message.fileId || activeFile?.id || 0,
+                      lastActivity: Date.now()
+                    }));
+                  
+                  console.log('New collaborators list:', newCollaborators);
+                  
+                  // Clear all existing collaborators for this file and set the new list
+                  setCollaborators(prev => {
+                    const otherFilesCollabs = prev.filter(c => c.fileId !== (message.fileId || activeFile?.id));
+                    return [...otherFilesCollabs, ...newCollaborators];
+                  });
+                }
                 break;
               case 'saved':
                 addCollaborationEvent(message.userId, message.username, 'saved', `Saved ${activeFile?.name || 'current file'}`);

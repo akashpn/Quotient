@@ -5,10 +5,10 @@ import TabBar from '@/components/TabBar';
 import CodeEditor from '@/components/CodeEditor';
 import OutputPanel from '@/components/OutputPanel';
 import StatusBar from '@/components/StatusBar';
-import CollaborationToast from '@/components/CollaborationToast';
+// import CollaborationToast from '@/components/CollaborationToast';
 import LanguageModal from '@/components/LanguageModal';
 import { useEditorContext } from '@/contexts/EditorContext';
-import { useCollaborationContext } from '@/contexts/CollaborationContext';
+// import { useCollaborationContext } from '@/contexts/CollaborationContext';
 import { canExecuteLanguage } from '@/utils/languageUtils';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 
@@ -17,7 +17,7 @@ const Editor: React.FC = () => {
   const [outputVisible, setOutputVisible] = useState(true);
   const [languageModalOpen, setLanguageModalOpen] = useState(false);
   const { activeFile } = useEditorContext();
-  const { collaborators } = useCollaborationContext();
+  // const { collaborators } = useCollaborationContext();
   const { executeCode, isExecuting, lastResult } = useCodeExecution();
   
   const [outputContent, setOutputContent] = useState({
@@ -118,7 +118,7 @@ const Editor: React.FC = () => {
         </main>
       </div>
       
-      <CollaborationToast />
+      {/* <CollaborationToast /> */}
       
       <LanguageModal 
         open={languageModalOpen}

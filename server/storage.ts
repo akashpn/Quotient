@@ -7,9 +7,21 @@ import {
   type SupportedLanguage
 } from "@shared/schema";
 import { v4 as uuidv4 } from 'uuid';
+import session from "express-session";
+import createMemoryStore from "memorystore";
+
+// This type augmentation is used to add the sessionStore property to the IStorage interface
+declare module 'express-session' {
+  interface Store {}
+}
+
+const MemoryStore = createMemoryStore(session);
 
 // IStorage interface with CRUD methods
 export interface IStorage {
+  // Session store for authentication
+  sessionStore: session.Store;
+  
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -38,6 +50,7 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
+  public sessionStore: session.Store;
   private users: Map<number, User>;
   private projects: Map<number, Project>;
   private files: Map<number, File>;
@@ -49,6 +62,9 @@ export class MemStorage implements IStorage {
   private collaboratorId: number;
 
   constructor() {
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // Prune expired entries every 24h
+    });
     this.users = new Map();
     this.projects = new Map();
     this.files = new Map();

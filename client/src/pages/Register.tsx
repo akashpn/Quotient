@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/use-auth';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,15 +29,14 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function Register() {
   const [, navigate] = useLocation();
-  const { register, loading, error, isAuthenticated } = useAuth();
-  const [formError, setFormError] = useState<string | null>(null);
+  const { user, registerMutation } = useAuth();
   
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (user) {
       navigate('/');
     }
-  }, [isAuthenticated, navigate]);
+  }, [user, navigate]);
   
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -48,14 +47,14 @@ export default function Register() {
     },
   });
   
-  async function onSubmit(values: RegisterFormValues) {
-    setFormError(null);
-    try {
-      await register(values.username, values.password);
-      navigate('/');
-    } catch (err) {
-      setFormError((err as Error).message);
-    }
+  function onSubmit(values: RegisterFormValues) {
+    // Create the user data without confirmPassword
+    const userData = {
+      username: values.username,
+      password: values.password
+    };
+    
+    registerMutation.mutate(userData);
   }
   
   return (
@@ -112,18 +111,18 @@ export default function Register() {
                 )}
               />
               
-              {(formError || error) && (
+              {registerMutation.error && (
                 <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm">
-                  {formError || error}
+                  {registerMutation.error.message}
                 </div>
               )}
               
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={loading}
+                disabled={registerMutation.isPending}
               >
-                {loading ? (
+                {registerMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating account...
@@ -135,7 +134,7 @@ export default function Register() {
               
               <div className="text-center text-sm">
                 Already have an account?{' '}
-                <Link href="/login" className="text-primary hover:underline">
+                <Link href="/auth" className="text-primary hover:underline">
                   Sign in
                 </Link>
               </div>

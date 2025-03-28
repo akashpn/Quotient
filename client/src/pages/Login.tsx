@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/use-auth';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,15 +25,14 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const [, navigate] = useLocation();
-  const { login, loading, error, isAuthenticated } = useAuth();
-  const [formError, setFormError] = useState<string | null>(null);
+  const { user, loginMutation } = useAuth();
   
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (user) {
       navigate('/');
     }
-  }, [isAuthenticated, navigate]);
+  }, [user, navigate]);
   
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -43,14 +42,8 @@ export default function Login() {
     },
   });
   
-  async function onSubmit(values: LoginFormValues) {
-    setFormError(null);
-    try {
-      await login(values.username, values.password);
-      navigate('/');
-    } catch (err) {
-      setFormError((err as Error).message);
-    }
+  function onSubmit(values: LoginFormValues) {
+    loginMutation.mutate(values);
   }
   
   return (
@@ -93,18 +86,18 @@ export default function Login() {
                 )}
               />
               
-              {(formError || error) && (
+              {loginMutation.error && (
                 <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm">
-                  {formError || error}
+                  {loginMutation.error.message}
                 </div>
               )}
               
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={loading}
+                disabled={loginMutation.isPending}
               >
-                {loading ? (
+                {loginMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Signing in...

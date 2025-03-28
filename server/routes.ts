@@ -7,37 +7,23 @@ import { log } from './vite';
 import { ZodError } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { executeJavaScript, executeTypeScript, executePython } from './execution';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-
-// JWT secret - in production, use an environment variable
-const JWT_SECRET = 'quotient_jwt_secret';
+import { setupAuth } from './auth';
 
 // Auth middleware for protected routes
-const authMiddleware = (req: Request & { user?: any }, res: Response, next: NextFunction) => {
-  // Get token from header
-  const token = req.header('x-auth-token');
-  
-  // Check if no token
-  if (!token) {
-    return res.status(401).json({ message: 'No token, authorization denied' });
+// Auth middleware for protected routes
+const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: 'Authentication required' });
   }
-  
-  try {
-    // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    
-    // Add user from payload
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ message: 'Token is not valid' });
-  }
+  next();
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  
+  // Set up authentication routes
+  setupAuth(app);
   
   // WebSocket server for collaborative editing
   const wss = new WebSocketServer({ 
@@ -72,7 +58,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (validatedMessage.type === 'join') {
           const { userId, username, fileId } = validatedMessage;
           
+          // Store user info when they connect
+          const existingUser = Array.from(activeUsers.values()).find(u => u.userId === userId);
+          if (existingUser) {
+            console.log(`[ws] User ${username} (${userId}) already connected in another window, updating connection`);
+          }
           activeUsers.set(ws, { userId, username });
+          console.log(`[ws] Set active user: ${username} (${userId})`);
           
           // Add user to file connections
           if (fileId) {
@@ -89,6 +81,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 return user ? user[1] : null;
               })
               .filter(Boolean);
+              
+            // Debug the users list
+            console.log(`[ws] Active users in file ${fileId}:`, activeFileUsers);
             
             // Send to the new user
             ws.send(JSON.stringify({
@@ -257,9 +252,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Projects API
-  app.post('/api/projects', async (req, res) => {
+  app.post('/api/projects', authMiddleware, async (req, res) => {
     try {
-      const project = await storage.createProject(req.body);
+      // TypeScript knows req.user exists here because authMiddleware checks for it
+      const project = await storage.createProject({
+        ...req.body,
+        ownerId: (req.user as any).id
+      });
       res.status(201).json(project);
     } catch (error) {
       res.status(400).json({ message: (error as Error).message });
@@ -283,7 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Files API
-  app.post('/api/files', async (req, res) => {
+  app.post('/api/files', authMiddleware, async (req, res) => {
     try {
       const file = await storage.createFile(req.body);
       res.status(201).json(file);
@@ -309,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(file);
   });
   
-  app.put('/api/files/:id', async (req, res) => {
+  app.put('/api/files/:id', authMiddleware, async (req, res) => {
     const id = parseInt(req.params.id);
     try {
       const file = await storage.updateFile(id, req.body);
@@ -319,7 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete('/api/files/:id', async (req, res) => {
+  app.delete('/api/files/:id', authMiddleware, async (req, res) => {
     const id = parseInt(req.params.id);
     try {
       await storage.deleteFile(id);
@@ -330,15 +329,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // User routes
-  app.post('/api/users', async (req, res) => {
-    try {
-      const user = await storage.createUser(req.body);
-      res.status(201).json({ id: user.id, username: user.username });
-    } catch (error) {
-      res.status(400).json({ message: (error as Error).message });
-    }
-  });
-  
   app.get('/api/users/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     const user = await storage.getUser(id);
@@ -406,100 +396,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Authentication routes
-  app.post('/api/auth/register', async (req, res) => {
-    try {
-      const { username, password } = req.body;
-      
-      // Check if user already exists
-      const existingUser = await storage.getUserByUsername(username);
-      if (existingUser) {
-        return res.status(400).json({ message: 'Username already exists' });
-      }
-      
-      // Hash password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      
-      // Create new user
-      const user = await storage.createUser({
-        username,
-        password: hashedPassword
-      });
-      
-      // Generate token
-      const token = jwt.sign(
-        { id: user.id, username: user.username },
-        JWT_SECRET,
-        { expiresIn: '1d' }
-      );
-      
-      res.status(201).json({
-        token,
-        user: {
-          id: user.id,
-          username: user.username
-        }
-      });
-    } catch (error) {
-      res.status(500).json({ message: (error as Error).message });
-    }
-  });
-
-  app.post('/api/auth/login', async (req, res) => {
-    try {
-      const { username, password } = req.body;
-      
-      // Find user
-      const user = await storage.getUserByUsername(username);
-      if (!user) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-      }
-      
-      // Check password
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-      }
-      
-      // Generate token
-      const token = jwt.sign(
-        { id: user.id, username: user.username },
-        JWT_SECRET,
-        { expiresIn: '1d' }
-      );
-      
-      res.json({
-        token,
-        user: {
-          id: user.id,
-          username: user.username
-        }
-      });
-    } catch (error) {
-      res.status(500).json({ message: (error as Error).message });
-    }
-  });
-
-  // Get current user - protected route
-  app.get('/api/auth/user', authMiddleware, async (req: Request & { user?: any }, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      
-      res.json({
-        id: user.id,
-        username: user.username
-      });
-    } catch (error) {
-      res.status(500).json({ message: (error as Error).message });
-    }
-  });
-  
   // Project invitation and collaboration routes
-  app.post('/api/projects/invite', authMiddleware, async (req: Request & { user?: any }, res) => {
+  app.post('/api/projects/invite', authMiddleware, async (req, res) => {
     try {
       const { projectId, email } = req.body;
       
