@@ -35,8 +35,10 @@ function App() {
       <AuthProvider>
         <ProjectProvider>
           <EditorProvider>
-            <Router />
-            <Toaster />
+            <CollaborationProvider>
+              <Router />
+              <Toaster />
+            </CollaborationProvider>
           </EditorProvider>
         </ProjectProvider>
       </AuthProvider>
