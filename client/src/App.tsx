@@ -4,8 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Editor from "@/pages/Editor";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
+import AuthPage from "@/pages/auth-page";
 import { EditorProvider } from "@/contexts/EditorContext";
 import { ProjectProvider } from "@/contexts/ProjectContext";
 import { CollaborationProvider } from "@/contexts/CollaborationContext";
@@ -16,15 +15,8 @@ function Router() {
   return (
     <Switch>
       <ProtectedRoute path="/" component={Editor} />
-      <Route path="/auth">
-        <Login />
-      </Route>
-      <Route path="/register">
-        <Register />
-      </Route>
-      <Route>
-        <NotFound />
-      </Route>
+      <Route path="/auth" component={AuthPage} />
+      <Route component={NotFound} />
     </Switch>
   );
 }
