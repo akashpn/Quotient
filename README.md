@@ -70,11 +70,6 @@ If the quick start scripts don't work for you:
 - `/js-server` - JavaScript server implementation (Express)
 - `/shared` - Shared types and schemas
 
-## Default Login
-
-- Username: `demo`
-- Password: `demo123`
-
 ## Technologies Used
 
 - **Frontend**: React, TypeScript, Tailwind CSS, shadcn/ui
